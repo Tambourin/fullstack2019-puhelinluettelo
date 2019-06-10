@@ -6,6 +6,7 @@ const cors = require('cors');
 
 app.use(bodyParser.json());
 app.use(cors());
+app.use(express.static('build'));
 
 morgan.token('body-json', (request, response) => {
 if (request.method === 'POST') {
@@ -35,6 +36,7 @@ let contacts = [
     id: 3
   }
 ]
+
 
 app.get('/info', (request, response) => {
   response.send(`<p>phonebook has info for ${contacts.length} people</p>

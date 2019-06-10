@@ -1,10 +1,23 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const morgan = require('morgan');
+const cors = require('cors');
 
 app.use(bodyParser.json());
+app.use(cors());
 
-const port = 3001;
+morgan.token('body-json', (request, response) => {
+if (request.method === 'POST') {
+    return JSON.stringify(request.body);
+  }
+  
+});
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body-json'));
+
+PORT = process.env.PORT || 3001;
+
 let contacts = [
   {
     name: "Jukka",
@@ -26,6 +39,10 @@ let contacts = [
 app.get('/info', (request, response) => {
   response.send(`<p>phonebook has info for ${contacts.length} people</p>
       <p>${new Date()}</p>`);
+})
+
+app.get('/api/persons', (request, response) => {
+  response.json(contacts);
 })
 
 app.get('/api/persons/:id', (request, response) => {
@@ -71,4 +88,4 @@ app.post('/api/persons', (request, response) => {
   
 })
 
-app.listen(port);
+app.listen(PORT);

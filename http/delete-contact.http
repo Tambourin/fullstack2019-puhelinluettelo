@@ -1,1 +1,5 @@
-DELETE http://localhost:3001/api/persons/2
+DELETE http://localhost:3001/api/persons/5d028378c51b69331cd036ce
+
+####### Delete virheellisesssä muodossa
+
+DELETE http://localhost:3001/api/persons/5d028378c51b69331

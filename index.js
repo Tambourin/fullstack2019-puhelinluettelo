@@ -1,8 +1,10 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const cors = require('cors');
+const Person = require('./models/person');
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -19,75 +21,82 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 
 PORT = process.env.PORT || 3001;
 
-let contacts = [
-  {
-    name: "Jukka",
-    number: 050505050,
-    id: 1
-  },
-  {
-    name: "Pekka",
-    number: 324424424242,
-    id: 2
-  },
-  {
-    name: "Heidi",
-    number: 0501616161,
-    id: 3
-  }
-]
 
 
 app.get('/info', (request, response) => {
-  response.send(`<p>phonebook has info for ${contacts.length} people</p>
+  Person.countDocuments({}).then(count => {
+    response.send(`<p>phonebook has info for ${count} people</p>
       <p>${new Date()}</p>`);
-})
-
-app.get('/api/persons', (request, response) => {
-  response.json(contacts);
-})
-
-app.get('/api/persons/:id', (request, response) => {
-  let id = Number(request.params.id);
-  let contact = contacts.find(contact => contact.id === id);
-  if(contact) {
-    response.send(contact);
-  } else {
-    response.status(404).end();
-  }  
-})
-
-app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  contacts = contacts.filter(contact => contact.id !== id);
-  response.status(204).end();
-})
-
-app.post('/api/persons', (request, response) => {
+  })
   
+})
+
+app.get('/api/persons', (request, response, next) => {
+  Person.find({}).then(persons => {
+    response.json(persons);
+  }).catch(error => next(error));
+})
+
+app.get('/api/persons/:id', (request, response, next) => {
+  let person = Person.findById(request.params.id).then(person => {
+    if(person) {
+      response.json(person);
+    } else {
+      response.status(404).end();
+    }  
+  }).catch(error => next(error))  
+})
+
+
+
+app.delete('/api/persons/:id', (request, response, next) => {  
+  Person.findByIdAndDelete(request.params.id).then(person => {
+    response.status(204).end();
+  }).catch(error => {
+    next(error); 
+  });
+  
+})
+
+app.post('/api/persons', (request, response, next) => {  
   if(!request.body.name) {
     return response.status(400).json({ error: "name missing" });
   } else if(!request.body.number) {
     return response.status(400).json({ error: "number missing" });
-  } else if(contacts.find(contact => contact.name === request.body.name)) {
-    return response.status(400).json({ error: "Name is already in use"});
-  }
+  } 
   
-  
-  
-  const contact = {
+  const person = new Person({
     name: request.body.name,
     number: request.body.number,
-    id: Math.floor(Math.random() * 999999)
-  } 
+  }); 
 
-  contacts = contacts.concat(contact);
-  console.log('contacts: ', contacts);
-    
-  
-  response.json(request.body);
-  
-  
+  person.save().then(savedPerson => {
+    response.json(savedPerson);
+  }).catch(error => {
+    next(error);
+  });  
 })
+
+app.put('/api/persons/:id', (request, response, next) => {
+  const person = {
+    name: request.body.name,
+    number: request.body.number,
+  }
+  Person.findByIdAndUpdate(request.params.id, person, { new: true }).then((updatedPerson) => {
+    response.json(updatedPerson);
+  }).catch(error => next(error))
+})
+
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error);
+  if(error.name === 'CastError') {
+    return response.status(400).send({ error: 'id format error' });
+  } else if(error.name === 'ValidationError') {
+    return response.status(400).send({ error: error.message});
+  }
+  next(error);
+}
+app.use(errorHandler);
 
 app.listen(PORT);
